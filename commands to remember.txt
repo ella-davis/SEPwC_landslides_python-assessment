@@ -1,0 +1,4 @@
+to initialise the python environment:
+
+python -m venv sepwclandslides_env
+sepwclandslides_env\Scripts\activate
