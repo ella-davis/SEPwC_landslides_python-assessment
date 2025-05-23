@@ -22,6 +22,7 @@ def extract_values_from_raster(raster_path, shape_object):
 
 #Reference - https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
 
+# A function to train a learning model using the raster data read in.
 def make_classifier(x, y, verbose=False):
     from skLearn.ensemble import RandomForestClassifier
     from skLearn.modal_selection import train
