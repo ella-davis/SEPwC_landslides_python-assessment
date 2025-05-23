@@ -13,3 +13,8 @@ def convert_to_rasterio(raster_data_path, template_raster_path = None):
         profile = src.profile
         transform = src.transform
     return data, transform, profile
+
+def extract_values_from_raster(raster_path, shape_object):
+    with rasterio.open(raster_path) as src:
+        out_image, out_transform = mask(src, shape_object.geometry, crop = True)
+        return out_image[0] 
