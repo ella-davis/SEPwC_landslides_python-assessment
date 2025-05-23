@@ -20,6 +20,18 @@ def extract_values_from_raster(raster_path, shape_object):
         out_image, out_transform = mask(src, shape_object.geometry, crop = True)
         return out_image[0] 
 
+def make_classifier(x, y, verbose=False):
+
+    return
+
+def make_prob_raster_data(topo, geo, lc, dist_fault, slope, classifier):
+
+    return
+
+def create_dataframe(topo, geo, lc, dist_fault, slope, shape, landslides):
+
+    return
+
 # The core function
 def main():
 
