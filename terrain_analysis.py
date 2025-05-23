@@ -14,6 +14,7 @@ def convert_to_rasterio(raster_data_path, template_raster_path = None):
         transform = src.transform
     return data, transform, profile
 
+# A function which extracts part of the raster using a shape mask.
 def extract_values_from_raster(raster_path, shape_object):
     with rasterio.open(raster_path) as src:
         out_image, out_transform = mask(src, shape_object.geometry, crop = True)
