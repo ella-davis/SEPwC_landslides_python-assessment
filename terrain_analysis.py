@@ -50,6 +50,30 @@ probability = classifier.predict_probaility(X_all)[;, 1]
 
 def create_dataframe(topo, geo, lc, dist_fault, slope, shape, landslides):
 
+import pandas as pd 
+from shapely.geometry import Point
+import random
+
+slide_values = []
+for idx, row in landslides.iterrows():
+    pt = row.geometry
+    col, row = ~shape[0].transform * (pt.x, pt.y)
+    col, row = int(col), int(row)
+    values = [a, [row, col] for a in [topo, geo, lc, dist_fault, slope]]
+    slide_values.append(values)
+
+non_slide_values = []
+rows, cols = topo.shape
+while len(non_slide_values) < len(slide_values):
+    r, c = random.randint(0, rows-1), random.randint(0, cols-1)
+    pt = Point(shape[0].transform * (c, r))
+    if not landslides.contains(pt).any():
+        values = [a[r, c] for a in [topo, geo, lc, dist_fault, slope]]
+        non_slide_values.append(values)
+
+    x = pd.DataFrame(slide_values + non_slide_values, columns=["topo", "geo", "lc", "dist_fault", "slope"])
+    y = pd.Series([1]*len(slide_values) + [0]*len(non_slide_values))
+
     return
 
 # The core function
