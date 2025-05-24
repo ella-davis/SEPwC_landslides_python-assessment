@@ -37,6 +37,10 @@ def make_classifier(x, y, verbose=False):
     clf = RandomForestClassifier(n_estimators=100, random_state=50)
     clf.fit(x_train, y_train)
 
+    if verbose
+        preds = clf.predict(x_test)
+        print("Classifier Accuracy", accuracy_score(y_test, preds)
+
     return clf
 
 # A function to use the trained learning model data to check the probability of a landslide occuring.
