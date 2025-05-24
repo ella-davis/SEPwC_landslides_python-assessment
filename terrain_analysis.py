@@ -118,6 +118,10 @@ def main():
                         action='store_true',
                         default=False,
                         help="Print progress")
+    parser.add_argument('--slope-output',
+                    help="outputs the slope output into .tif format")
+    parser.add_argument('--dist-fault-output',
+                    help="outputs the distance from fault into .tif format")
 
     args = parser.parse_args()
 
@@ -168,6 +172,22 @@ def main():
 
     if args.verbose:
         print("Exported Output:", args.output)
+
+    if args.dist_fault_output:
+        dist_profile = profile.copy()
+        dist_profile.update(dtype='float32', count=1)
+        with rasterio.open(args.dist_fault_output, 'w', **dist_profile) as dst:
+            dst.write(dist_fault.astype(np.float32), 1)
+        if args.verbose:
+            print("Saved distance from fault tif raster:", args.dist_fault_output)
+
+    if args.slope_output:
+        slope_profile = profile.copy()
+        slope_profile.update(dtype='float32', count=1)
+        with rasterio.open(args.slope_output, 'w', **slope_profile) as dst:
+            dst.write(slope.astype(np.float32), 1)
+        if args.verbose:
+            print("Exported slope tif raster:", args.slope_output)
 
 if __name__ == '__main__':
     main()
