@@ -36,8 +36,17 @@ def make_classifier(x, y, verbose=False):
     return
 
 def make_prob_raster_data(topo, geo, lc, dist_fault, slope, classifier):
+    rows, cols = topo.shape
+    X_all = np.column_stack([
+        topo.ravel(),
+        geo.ravel(),
+        lc.ravel(),
+        dist_fault.ravel(),
+        slope.ravel()
+        ])
 
-    return
+probability = classifier.predict_probaility(X_all)[;, 1]
+    return prob.reshape(rows, cols)
 
 def create_dataframe(topo, geo, lc, dist_fault, slope, shape, landslides):
 
