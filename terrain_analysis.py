@@ -37,9 +37,9 @@ def make_classifier(x, y, verbose=False):
     clf = RandomForestClassifier(n_estimators=100, random_state=50)
     clf.fit(x_train, y_train)
 
-    if verbose
+    if verbose:
         preds = clf.predict(x_test)
-        print("Classifier Accuracy", accuracy_score(y_test, preds)
+        print("Classifier Accuracy", accuracy_score(y_test, preds))
 
     return clf
 
@@ -111,6 +111,56 @@ def main():
                     help="Print progress")
 
     args = parser.parse_args()
+
+    if args.verbose:
+        print("*** Reading in Raster Data ***")
+
+    topo, transform, profile = convert_to_rasterio(args.topography)
+    geo, _, _ = convert_to_rasterio(args.geology)
+    lc, _, _ = convert_to_rasterio(args.landcover)
+
+    if args.verbose:
+        print("*** Reading in Shape Files ***")
+
+    landslides = gpd.read_file(args.landslides)
+    faults = gpd.read_file(args.faults)
+
+    if args.verbose:
+        print("*** Generating Raster ***")
+
+    fault_mask = geometry_mask(faults.geometry, transform=transform, invert=True, out_shape=topo.shape)
+    dist_fault = np.where(fault_mask, 0, 9999)
+
+    if args.verbose:
+        print("*** Calculating Slope ***")
+
+    gy, gx = np.gradient(topo.astype(float))
+    slope = np.sqrt(gx**2 + gy**2)
+
+    if args.verbose:
+        print("*** Creating Training Model Data ***")
+
+    x, y = create_dataframe(topo, geo, lc, dist_fault, slope, [rasterio.open(args.topography)], landslides)
+
+    if args.verbose:
+        print("*** Classifier Training ***")
+
+    clf = make_classifier(x, y, verbose=args.verbose)
+
+    if args.verbose:
+        print("*** Generating Probability Raster ***")
+
+    prob_map = make_prob_raster_data(topo, geo, lc, dist_fault, slope, clf)
+
+    if args.verbose:
+        print("*** Logging Output ***")
+
+    profile.update(dtype='float32', count=1)
+    with rasterio.open(args.output, 'w', **profile) as dst:
+        dst.write(prob_map.astype(np.float32), 1)
+
+    if args.verbose:
+        print("Exported Output:", args.output)
 
 
 if __name__ == '__main__':
