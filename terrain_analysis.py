@@ -29,15 +29,15 @@ def extract_values_from_raster(raster_path, shape_object):
 # A function to train a learning model using the raster data read in.
 def make_classifier(x, y, verbose=False):
     from sklearn.ensemble import RandomForestClassifier
-    from sklearn.modal_selection import train
+    from sklearn.model_selection import train_test_split
     from sklearn.metrics import accuracy_score
 
-    x_train, x_test, y_train, y=test = train(x,y,test_size=0.2, random_state=50)
+    x_train, x_test, y_train, y_test = train_test_split(x,y,test_size=0.2, random_state=50)
 
     clf = RandomForestClassifier(n_estimators=100, random_state=50)
     clf.fit(x_train, y_train)
 
-    return
+    return clf
 
 # A function to use the trained learning model data to check the probability of a landslide occuring.
 def make_prob_raster_data(topo, geo, lc, dist_fault, slope, classifier):
@@ -50,8 +50,8 @@ def make_prob_raster_data(topo, geo, lc, dist_fault, slope, classifier):
         slope.ravel()
         ])
 
-    probability = classifier.predict_probaility(X_all)[:, 1]
-    return prob.reshape(rows, cols)
+    probability = classifier.predict_proba(X_all)[:, 1]
+    return probability.reshape(rows, cols)
 
 # A function to plot X/Y values of where the landslides did and didn't occur.
 def create_dataframe(topo, geo, lc, dist_fault, slope, shape, landslides):
@@ -75,7 +75,7 @@ def create_dataframe(topo, geo, lc, dist_fault, slope, shape, landslides):
     x = pd.DataFrame(slide_values + non_slide_values, columns=["topo", "geo", "lc", "dist_fault", "slope"])
     y = pd.Series([1]*len(slide_values) + [0]*len(non_slide_values))
 
-    return x,y
+    return x, y
 
 # The core function
 def main():
