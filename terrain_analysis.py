@@ -50,33 +50,32 @@ def make_prob_raster_data(topo, geo, lc, dist_fault, slope, classifier):
         slope.ravel()
         ])
 
-probability = classifier.predict_probaility(X_all)[;, 1]
+    probability = classifier.predict_probaility(X_all)[:, 1]
     return prob.reshape(rows, cols)
 
 # A function to plot X/Y values of where the landslides did and didn't occur.
 def create_dataframe(topo, geo, lc, dist_fault, slope, shape, landslides):
+    slide_values = []
+    for idx, row in landslides.iterrows():
+        pt = row.geometry
+        col, row = ~shape[0].transform * (pt.x, pt.y)
+        col, row = int(col), int(row)
+        values = [a[row, col] for a in [topo, geo, lc, dist_fault, slope]]
+        slide_values.append(values)
 
-slide_values = []
-for idx, row in landslides.iterrows():
-    pt = row.geometry
-    col, row = ~shape[0].transform * (pt.x, pt.y)
-    col, row = int(col), int(row)
-    values = [a, [row, col] for a in [topo, geo, lc, dist_fault, slope]]
-    slide_values.append(values)
-
-non_slide_values = []
-rows, cols = topo.shape
-while len(non_slide_values) < len(slide_values):
-    r, c = random.randint(0, rows-1), random.randint(0, cols-1)
-    pt = Point(shape[0].transform * (c, r))
-    if not landslides.contains(pt).any():
-        values = [a[r, c] for a in [topo, geo, lc, dist_fault, slope]]
-        non_slide_values.append(values)
+    non_slide_values = []
+    rows, cols = topo.shape
+    while len(non_slide_values) < len(slide_values):
+            r, c = random.randint(0, rows-1), random.randint(0, cols-1)
+            pt = Point(shape[0].transform * (c, r))
+            if not landslides.contains(pt).any():
+                values = [a[r,c] for a in [topo, geo, lc, dist_fault, slope]]
+                non_slide_values.append(values)
 
     x = pd.DataFrame(slide_values + non_slide_values, columns=["topo", "geo", "lc", "dist_fault", "slope"])
     y = pd.Series([1]*len(slide_values) + [0]*len(non_slide_values))
 
-    return
+    return x,y
 
 # The core function
 def main():
