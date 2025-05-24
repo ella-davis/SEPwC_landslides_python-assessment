@@ -48,16 +48,26 @@ def make_classifier(x, y, verbose=False):
 # A function to use the trained learning model data to check the probability of a landslide occuring.
 def make_prob_raster_data(topo, geo, lc, dist_fault, slope, classifier):
     rows, cols = topo.shape
-    X_all = np.column_stack([
+    X_all = pd.DataFrame(np.column_stack([
         topo.ravel(),
         geo.ravel(),
         lc.ravel(),
         dist_fault.ravel(),
         slope.ravel()
-        ])
+    ]), columns=["topo", "geo", "lc", "dist_fault", "slope"])
 
-    probability = classifier.predict_proba(X_all)[:, 1]
+    proba = classifier.predict_proba(X_all)
+
+    if 1 in classifier.classes_:
+        index_of_1 = list(classifier.classes_).index(1)
+        probability = proba[:, index_of_1]
+    else:
+        print("Warning: Class 1 (landslide) was not present in training data. Returning 0 probabilities.")
+        probability = np.zeros(X_all.shape[0])
+
     return probability.reshape(rows, cols)
+
+
 
 # A function to plot X/Y values of where the landslides did and didn't occur.
 def create_dataframe(topo, geo, lc, dist_fault, slope, shape, landslides):
