@@ -61,10 +61,11 @@ def make_prob_raster_data(topo, geo, lc, dist_fault, slope, classifier):
 def create_dataframe(topo, geo, lc, dist_fault, slope, shape, landslides):
     slide_values = []
     for idx, row in landslides.iterrows():
-        pt = row.geometry
-        col, row = ~shape[0].transform * (pt.x, pt.y)
-        col, row = int(col), int(row)
-        values = [a[row, col] for a in [topo, geo, lc, dist_fault, slope]]
+        pt = row.geometry.centroid
+        col, row_idx = ~shape[0].transform * (pt.x, pt.y)
+        col, row_idx = int(col), int(row_idx)
+    if 0 <= row_idx < topo.shape[0] and 0 <= col < topo.shape[1]:
+        values = [a[row_idx, col] for a in [topo, geo, lc, dist_fault, slope]]
         slide_values.append(values)
 
     non_slide_values = []
