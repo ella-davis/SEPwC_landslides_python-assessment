@@ -28,9 +28,9 @@ def extract_values_from_raster(raster_path, shape_object):
 
 # A function to train a learning model using the raster data read in.
 def make_classifier(x, y, verbose=False):
-    from skLearn.ensemble import RandomForestClassifier
-    from skLearn.modal_selection import train
-    fromskLearn.metrics import accuracy_score
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.modal_selection import train
+    from sklearn.metrics import accuracy_score
 
     x_train, x_test, y_train, y=test = train(x,y,test_size=0.2, random_state=50)
 
