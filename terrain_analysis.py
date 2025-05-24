@@ -6,6 +6,10 @@ import numpy as np
 from rasterio.mask import mask
 from rasterio.features import geometry_mask
 
+import pandas as pd 
+from shapely.geometry import Point
+import random
+
 # A function which opens up the raster files and reads in the data, location and metadata.
 def convert_to_rasterio(raster_data_path, template_raster_path = None):
     with rasterio.open(raster_data_path) as src:
@@ -35,6 +39,7 @@ def make_classifier(x, y, verbose=False):
 
     return
 
+# A function to use the trained learning model data to check the probability of a landslide occuring.
 def make_prob_raster_data(topo, geo, lc, dist_fault, slope, classifier):
     rows, cols = topo.shape
     X_all = np.column_stack([
@@ -48,11 +53,8 @@ def make_prob_raster_data(topo, geo, lc, dist_fault, slope, classifier):
 probability = classifier.predict_probaility(X_all)[;, 1]
     return prob.reshape(rows, cols)
 
+# A function to plot X/Y values of where the landslides did and didn't occur.
 def create_dataframe(topo, geo, lc, dist_fault, slope, shape, landslides):
-
-import pandas as pd 
-from shapely.geometry import Point
-import random
 
 slide_values = []
 for idx, row in landslides.iterrows():
