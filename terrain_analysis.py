@@ -1,3 +1,6 @@
+import os
+os.environ['SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL'] = 'True'
+
 # Import Libraries
 import argparse
 import rasterio
@@ -5,7 +8,6 @@ import geopandas as gpd
 import numpy as np
 from rasterio.mask import mask
 from rasterio.features import geometry_mask
-
 import pandas as pd 
 from shapely.geometry import Point
 import random
