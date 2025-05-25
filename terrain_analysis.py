@@ -1,3 +1,6 @@
+# To run the program in verbose mode then make sure to use the flag -v
+#python3 terrain_analysis.py --topography data/AW3D30.tif --geology data/geology_raster.tif --landcover data/Landcover.tif --faults data/Confirmed_faults.shp data/landslides.shp probability.tif
+
 # Environment Variables for allowing deprecated SKLearn Package
 import os
 os.environ['SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL'] = 'True'
