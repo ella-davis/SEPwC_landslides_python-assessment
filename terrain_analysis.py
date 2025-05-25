@@ -231,6 +231,27 @@ def main():
 
     log(f"Probability Map outputted to {args.output}")
 
+    if args.verbose:
+        print("Exported Output:", args.output)
+
+    # Verbose Logging for Distance from Fault Sub-Function.
+    if args.dist_fault_output:
+        dist_profile = profile.copy()
+        dist_profile.update(dtype='float32', count=1)
+        with rasterio.open(args.dist_fault_output, 'w', **dist_profile) as dst:
+            dst.write(dist_fault.astype(np.float32), 1)
+        if args.verbose:
+            print("Saved distance from fault tif raster:", args.dist_fault_output)
+
+    # Verbose Logging for Slope Raster Sub-Function.
+    if args.slope_output:
+        slope_profile = profile.copy()
+        slope_profile.update(dtype='float32', count=1)
+        with rasterio.open(args.slope_output, 'w', **slope_profile) as dst:
+            dst.write(slope.astype(np.float32), 1)
+        if args.verbose:
+            print("Exported slope tif raster:", args.slope_output)
+
 # An IF statement to check whether this is 'main', if it is present then run the main() function
 if __name__ == '__main__':
     main()
