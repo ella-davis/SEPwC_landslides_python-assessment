@@ -158,6 +158,7 @@ def main():
 
     args = parser.parse_args()
 
+    # Calculating the total amount of steps for non-verbose logging output
     total_steps = 7
     current_step = 0
 
@@ -174,34 +175,41 @@ def main():
             bar = "#" * filled_len + "-" * (bar_len - filled_len)
             print(f"[{bar}] {pct}% - {label}")
 
+    # First step, reading in Raster Data
     current_step += 1
-    progress(current_step, "Reading raster data")
+    progress(current_step, "Reading in raster data")
     topo, transform, profile = convert_to_rasterio(args.topography, verbose=args.verbose)
     geo, _, _ = convert_to_rasterio(args.geology, verbose=args.verbose)
     lc, _, _ = convert_to_rasterio(args.landcover, verbose=args.verbose)
 
+    # Second step, reading in Shapefiles
     current_step += 1
-    progress(current_step, "Reading shapefiles")
+    progress(current_step, "Reading in shapefiles")
     landslides = gpd.read_file(args.landslides)
     faults = gpd.read_file(args.faults)
 
+    # Third step, processing input data
     current_step += 1
     progress(current_step, "Processing input data")
     dist_fault = rasterize_faults_as_distance(faults, topo.shape, transform)
     slope = calculate_slope(topo, verbose=args.verbose)
 
+    # Fourth step, preparing training data
     current_step += 1
     progress(current_step, "Preparing training data")
     x, y = create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, landslides, verbose=args.verbose)
 
+    # Fifth Step, training classifier
     current_step += 1
-    progress(current_step, "Training model")
+    progress(current_step, "Training classifier")
     clf = make_classifier(x, y, verbose=args.verbose)
 
+    # Sixth Step, generating probability map
     current_step += 1
     progress(current_step, "Generating probability map")
     prob_map = make_prob_raster(topo, geo, lc, dist_fault, slope, clf, verbose=args.verbose)
 
+    # Seventh Step, exporting output files
     current_step += 1
     progress(current_step, "Exporting outputs")
     profile.update(dtype='float32', count=1)
