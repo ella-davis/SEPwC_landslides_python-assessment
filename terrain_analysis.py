@@ -1,3 +1,4 @@
+# Environment Variables for allowing deprecated SKLearn Package
 import os
 os.environ['SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL'] = 'True'
 
@@ -91,7 +92,7 @@ def make_prob_raster(topo, geo, lc, dist_fault, slope, classifier):
 
     return prob.reshape((rows, cols))
 
-# The core function
+# The core function originating from the skeleton script with additional logic for outputting.
 def main():
     parser = argparse.ArgumentParser(
         prog="Landslide hazard using ML",
@@ -132,37 +133,44 @@ def main():
     geo, _, _ = convert_to_rasterio(args.geology)
     lc, _, _ = convert_to_rasterio(args.landcover)
 
+    # Verbose for Reading in Shape Files function 
     if args.verbose:
         print("*** Reading in Shape Files ***")
 
     landslides = gpd.read_file(args.landslides)
     faults = gpd.read_file(args.faults)
 
+    # Verbose Logging for Generating Raster function
     if args.verbose:
         print("*** Generating Raster ***")
 
     dist_fault = rasterize_faults_as_distance(faults, topo.shape, transform)
 
+    # Verbose Logging for Calculating the Slope function
     if args.verbose:
         print("*** Calculating Slope ***")
 
     slope = calculate_slope(topo)
 
+    # Verbose Logging for Training Model Data function
     if args.verbose:
         print("*** Creating Training Model Data ***")
 
     x, y = create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, landslides)
 
+    # Verbose Logging for Classifier Training function
     if args.verbose:
         print("*** Classifier Training ***")
 
     clf = make_classifier(x, y, verbose=args.verbose)
 
+    # Verbose logging for Probability Raster function
     if args.verbose:
         print("*** Generating Probability Raster ***")
 
     prob_map = make_prob_raster(topo, geo, lc, dist_fault, slope, clf)
 
+    # Function for verbose output logging
     if args.verbose:
         print("*** Logging Output ***")
 
@@ -173,6 +181,7 @@ def main():
     if args.verbose:
         print("Exported Output:", args.output)
 
+    # Verbose Logging for Distance from Fault Sub-Function.
     if args.dist_fault_output:
         dist_profile = profile.copy()
         dist_profile.update(dtype='float32', count=1)
@@ -181,6 +190,7 @@ def main():
         if args.verbose:
             print("Saved distance from fault tif raster:", args.dist_fault_output)
 
+    # Verbose Logging for Slope Raster Sub-Function.
     if args.slope_output:
         slope_profile = profile.copy()
         slope_profile.update(dtype='float32', count=1)
@@ -189,5 +199,6 @@ def main():
         if args.verbose:
             print("Exported slope tif raster:", args.slope_output)
 
+# An IF statement to check whether this is 'main', if it is present then run the main() function.
 if __name__ == '__main__':
     main()
