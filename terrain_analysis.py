@@ -1,17 +1,17 @@
 # To run the program in verbose mode then make sure to use the flag -v
 # python3 terrain_analysis.py --topography data/AW3D30.tif --geology data/geology_raster.tif --landcover data/Landcover.tif --faults data/Confirmed_faults.shp data/landslides.shp probability.tif
-# Also make sure that verbose=True is enabled on the functions instead of verbose=False.
+# Also make sure that verbose=True is enabled on the functions instead of verbose=False
 
 # Import Libraries
-import random
 import os
+import random
 import argparse
-import rasterio
-import geopandas as gpd
+
 import numpy as np
-from rasterio.mask import mask
+import pandas as pd
+import rasterio
 from rasterio.features import geometry_mask
-import pandas as pd 
+import geopandas as gpd
 from shapely.geometry import Point
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
@@ -20,8 +20,8 @@ from sklearn.metrics import accuracy_score
 # Environment Variables for allowing deprecated SKLearn Package
 os.environ['SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL'] = 'True'
 
-# A function which opens up the raster files and reads in the data, location and metadata.
-def convert_to_rasterio(raster_data_path, template_raster_path = None, verbose=False):
+# A function which opens up the raster files and reads in the data, location and metadata
+def convert_to_rasterio(raster_data_path, verbose=False):
     with rasterio.open(raster_data_path) as src:
         data = src.read(1)
         profile = src.profile
@@ -29,7 +29,7 @@ def convert_to_rasterio(raster_data_path, template_raster_path = None, verbose=F
 
         # Verbose Logging
         if verbose:
-            print(f"\n[Load in Raster] {raster_data_path}")
+            print("\n[Load in Raster] {raster_data_path}")
             print(f"    Shape {data.shape}, Type: {data.dtype}")
             print(f"    Min: {np.min(data)}, Max: {np.max(data)}, NaNs: {np.isnan(data)}")
     return data, transform, profile
@@ -40,7 +40,7 @@ def calculate_slope(topo_array, verbose=False):
 
     # Verbose Logging
     if verbose:
-        print(f"\n[Calculate Slope]")
+        print("\n[Calculate Slope]")
         print(f"    Shape {slope.shape}")
         print(f"    Min: {slope.min()}, Max: {slope.max()}")
     return slope
@@ -49,7 +49,7 @@ def rasterize_faults_as_distance(faults_gdf, shape, transform):
     mask_array = geometry_mask(faults_gdf.geometry, transform=transform, invert=True, out_shape=shape)
     return np.where(mask_array, 0, 9999)
 
-# A function to plot X/Y values of where the landslides did and didn't occur.
+# A function to plot X/Y values of where the landslides did and didn't occur
 def create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, landslides, verbose=False):
     slide_values = []
     for idx, row in landslides.iterrows():
@@ -69,12 +69,13 @@ def create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, lands
             values = [a[r, c] for a in [topo, geo, lc, dist_fault, slope]]
             non_slide_values.append(values)
 
-    x = pd.DataFrame(slide_values + non_slide_values, columns=["topo", "geo", "lc", "dist_fault", "slope"])
+    columns=["topo", "geo", "lc", "dist_fault", "slope"]
+    x = pd.DataFrame(slide_values + non_slide_values, columns=columns)
     y = pd.Series([1]*len(slide_values) + [0]*len(non_slide_values))
 
     # Verbose Logging
     if verbose:
-        print(f"\n[Training Data Frame]")
+        print("\n[Training Data Frame]")
         print(f"    Positive Samples: {len(slide_values)}")
         print(f"    Negative Samples: {len(non_slide_values)}")
         print("    Output First 20 Samples\n", x.head(20))
@@ -82,7 +83,7 @@ def create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, lands
 
 #Reference - https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
 
-# A function to train a learning model using the raster data read in.
+# A function to train a learning model using the raster data read in
 def make_classifier(x, y, verbose=False):
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=50)
     clf = RandomForestClassifier(n_estimators=100, random_state=50)
@@ -90,14 +91,14 @@ def make_classifier(x, y, verbose=False):
 
     if verbose:
         preds = clf.predict(x_test)
-        print(f"\n[Classifier]")
+        print("\n[Classifier]")
         print("Classifier Accuracy:", accuracy_score(y_test, preds))
         print(f"    Important Features: {clf.feature_importances_}")
         print(f"     Sample Predictions: {preds[:5]}")
 
     return clf
 
-# A function to use the trained learning model data to check the probability of a landslide occuring.
+# A function to use the trained learning model data to check the probability of a landslide occurring
 def make_prob_raster(topo, geo, lc, dist_fault, slope, classifier, verbose=False):
     rows, cols = topo.shape
     X_all = pd.DataFrame(np.column_stack([
@@ -118,13 +119,13 @@ def make_prob_raster(topo, geo, lc, dist_fault, slope, classifier, verbose=False
         prob = np.zeros(X_all.shape[0])
 
         if verbose:
-            print(f"\n[Probability Mapping]")
+            print("\n[Probability Mapping]")
             print(f"    Shape: {rows} x {cols}")
             print(f"    Minimum Probability: {prob.min():.4f}, Maximum Probability: {prob.max():.4f}")
 
     return prob.reshape((rows, cols))
 
-# The core function originating from the skeleton script with additional logic for outputting.
+# The core function originating from the skeleton script with additional logic for outputting
 def main():
     parser = argparse.ArgumentParser(
         prog="Landslide hazard using ML",
@@ -230,79 +231,6 @@ def main():
 
     log(f"Probability Map outputted to {args.output}")
 
-    if args.verbose:
-        print("*** Reading in Raster Data ***")
-
-    topo, transform, profile = convert_to_rasterio(args.topography)
-    geo, _, _ = convert_to_rasterio(args.geology)
-    lc, _, _ = convert_to_rasterio(args.landcover)
-
-    # Verbose for Reading in Shape Files function 
-    if args.verbose:
-        print("*** Reading in Shape Files ***")
-
-    landslides = gpd.read_file(args.landslides)
-    faults = gpd.read_file(args.faults)
-
-    # Verbose Logging for Generating Raster function
-    if args.verbose:
-        print("*** Generating Raster ***")
-
-    dist_fault = rasterize_faults_as_distance(faults, topo.shape, transform)
-
-    # Verbose Logging for Calculating the Slope function
-    if args.verbose:
-        print("*** Calculating Slope ***")
-
-    slope = calculate_slope(topo)
-
-    # Verbose Logging for Training Model Data function
-    if args.verbose:
-        print("*** Creating Training Model Data ***")
-
-    x, y = create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, landslides)
-
-    # Verbose Logging for Classifier Training function
-    if args.verbose:
-        print("*** Classifier Training ***")
-
-    clf = make_classifier(x, y, verbose=args.verbose)
-
-    # Verbose logging for Probability Raster function
-    if args.verbose:
-        print("*** Generating Probability Raster ***")
-
-    prob_map = make_prob_raster(topo, geo, lc, dist_fault, slope, clf)
-
-    # Function for verbose output logging
-    if args.verbose:
-        print("*** Logging Output ***")
-
-    profile.update(dtype='float32', count=1)
-    with rasterio.open(args.output, 'w', **profile) as dst:
-        dst.write(prob_map.astype(np.float32), 1)
-
-    if args.verbose:
-        print("Exported Output:", args.output)
-
-    # Verbose Logging for Distance from Fault Sub-Function.
-    if args.dist_fault_output:
-        dist_profile = profile.copy()
-        dist_profile.update(dtype='float32', count=1)
-        with rasterio.open(args.dist_fault_output, 'w', **dist_profile) as dst:
-            dst.write(dist_fault.astype(np.float32), 1)
-        if args.verbose:
-            print("Saved distance from fault tif raster:", args.dist_fault_output)
-
-    # Verbose Logging for Slope Raster Sub-Function.
-    if args.slope_output:
-        slope_profile = profile.copy()
-        slope_profile.update(dtype='float32', count=1)
-        with rasterio.open(args.slope_output, 'w', **slope_profile) as dst:
-            dst.write(slope.astype(np.float32), 1)
-        if args.verbose:
-            print("Exported slope tif raster:", args.slope_output)
-
-# An IF statement to check whether this is 'main', if it is present then run the main() function.
+# An IF statement to check whether this is 'main', if it is present then run the main() function
 if __name__ == '__main__':
     main()
