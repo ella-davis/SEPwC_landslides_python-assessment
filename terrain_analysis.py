@@ -1,5 +1,6 @@
 # To run the program in verbose mode then make sure to use the flag -v
-#python3 terrain_analysis.py --topography data/AW3D30.tif --geology data/geology_raster.tif --landcover data/Landcover.tif --faults data/Confirmed_faults.shp data/landslides.shp probability.tif
+# python3 terrain_analysis.py --topography data/AW3D30.tif --geology data/geology_raster.tif --landcover data/Landcover.tif --faults data/Confirmed_faults.shp data/landslides.shp probability.tif
+# Also make sure that verbose=True is enabled on the functions instead of verbose=False.
 
 # Environment Variables for allowing deprecated SKLearn Package
 import os
@@ -20,23 +21,36 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 # A function which opens up the raster files and reads in the data, location and metadata.
-def convert_to_rasterio(raster_data_path, template_raster_path = None):
+def convert_to_rasterio(raster_data_path, template_raster_path = None, verbose=True):
     with rasterio.open(raster_data_path) as src:
         data = src.read(1)
         profile = src.profile
         transform = src.transform
+
+        # Verbose Logging
+        if verbose:
+            print(f"\n[Load in Raster] {raster_data_path}")
+            print(f"    Shape {data.shape}, Type: {data.dtype}")
+            print(f"    Min: {np.min(data)}, Max: {np.max(data)}, NaNs: {np.isnan(data)}")
     return data, transform, profile
 
-def calculate_slope(topo_array):
+def calculate_slope(topo_array, verbose=True):
     gy, gx = np.gradient(topo_array.astype(float))
-    return np.sqrt(gx**2 + gy**2)
+    slope = np.sqrt(gx**2 + gy**2)
+
+    # Verbose Logging
+    if verbose:
+        print(f"\n[Calculate Slope]")
+        print(f"    Shape {slope.shape}")
+        print(f"    Min: {slope.min()}, Max: {slope.max()}")
+    return slope
 
 def rasterize_faults_as_distance(faults_gdf, shape, transform):
     mask_array = geometry_mask(faults_gdf.geometry, transform=transform, invert=True, out_shape=shape)
     return np.where(mask_array, 0, 9999)
 
 # A function to plot X/Y values of where the landslides did and didn't occur.
-def create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, landslides):
+def create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, landslides, verbose=True):
     slide_values = []
     for idx, row in landslides.iterrows():
         pt = row.geometry.centroid
@@ -57,24 +71,34 @@ def create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, lands
 
     x = pd.DataFrame(slide_values + non_slide_values, columns=["topo", "geo", "lc", "dist_fault", "slope"])
     y = pd.Series([1]*len(slide_values) + [0]*len(non_slide_values))
+
+    # Verbose Logging
+    if verbose:
+        print(f"\n[Training Data Frame]")
+        print(f"    Positive Samples: {len(slide_values)}")
+        print(f"    Negative Samples: {len(non_slide_values)}")
+        print("    Output First 20 Samples\n", x.head(20))
     return x, y
 
 #Reference - https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
 
 # A function to train a learning model using the raster data read in.
-def make_classifier(x, y, verbose=False):
+def make_classifier(x, y, verbose=True):
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=50)
     clf = RandomForestClassifier(n_estimators=100, random_state=50)
     clf.fit(x_train, y_train)
 
     if verbose:
         preds = clf.predict(x_test)
+        print(f"\n[Classifier]")
         print("Classifier Accuracy:", accuracy_score(y_test, preds))
+        print(f"    Important Features: {clf.feature_importances_}")
+        print(f"     Sample Predictions: {preds[:5]}")
 
     return clf
 
 # A function to use the trained learning model data to check the probability of a landslide occuring.
-def make_prob_raster(topo, geo, lc, dist_fault, slope, classifier):
+def make_prob_raster(topo, geo, lc, dist_fault, slope, classifier, verbose=True):
     rows, cols = topo.shape
     X_all = pd.DataFrame(np.column_stack([
         topo.ravel(),
@@ -92,6 +116,11 @@ def make_prob_raster(topo, geo, lc, dist_fault, slope, classifier):
     else:
         print("Warning: Class 1 (landslide) was not present in training data. Returning 0 probabilities.")
         prob = np.zeros(X_all.shape[0])
+
+        if verbose:
+            print(f"\n[Probability Mapping]")
+            print(f"    Shape: {rows} x {cols}")
+            print(f"    Minimum Probability: {prob.min():.4f}, Maximum Probability: {prob.max():.4f}")
 
     return prob.reshape((rows, cols))
 
