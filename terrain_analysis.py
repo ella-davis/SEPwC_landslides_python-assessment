@@ -21,7 +21,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 # A function which opens up the raster files and reads in the data, location and metadata.
-def convert_to_rasterio(raster_data_path, template_raster_path = None, verbose=True):
+def convert_to_rasterio(raster_data_path, template_raster_path = None, verbose=False):
     with rasterio.open(raster_data_path) as src:
         data = src.read(1)
         profile = src.profile
@@ -34,7 +34,7 @@ def convert_to_rasterio(raster_data_path, template_raster_path = None, verbose=T
             print(f"    Min: {np.min(data)}, Max: {np.max(data)}, NaNs: {np.isnan(data)}")
     return data, transform, profile
 
-def calculate_slope(topo_array, verbose=True):
+def calculate_slope(topo_array, verbose=False):
     gy, gx = np.gradient(topo_array.astype(float))
     slope = np.sqrt(gx**2 + gy**2)
 
@@ -50,7 +50,7 @@ def rasterize_faults_as_distance(faults_gdf, shape, transform):
     return np.where(mask_array, 0, 9999)
 
 # A function to plot X/Y values of where the landslides did and didn't occur.
-def create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, landslides, verbose=True):
+def create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, landslides, verbose=False):
     slide_values = []
     for idx, row in landslides.iterrows():
         pt = row.geometry.centroid
@@ -83,7 +83,7 @@ def create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, lands
 #Reference - https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
 
 # A function to train a learning model using the raster data read in.
-def make_classifier(x, y, verbose=True):
+def make_classifier(x, y, verbose=False):
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=50)
     clf = RandomForestClassifier(n_estimators=100, random_state=50)
     clf.fit(x_train, y_train)
@@ -98,7 +98,7 @@ def make_classifier(x, y, verbose=True):
     return clf
 
 # A function to use the trained learning model data to check the probability of a landslide occuring.
-def make_prob_raster(topo, geo, lc, dist_fault, slope, classifier, verbose=True):
+def make_prob_raster(topo, geo, lc, dist_fault, slope, classifier, verbose=False):
     rows, cols = topo.shape
     X_all = pd.DataFrame(np.column_stack([
         topo.ravel(),
@@ -157,6 +157,52 @@ def main():
                     help="outputs the distance from fault into .tif format")
 
     args = parser.parse_args()
+
+    def log(msg):
+        if not args.verbose:
+            print(msg)
+
+    log("Reading in raster data")
+    topo, transform, profile = convert_to_rasterio(args.topography, verbose=args.verbose)
+    geo, _, _ = convert_to_rasterio(args.geology, verbose=args.verbose)
+    lc, _, _ = convert_to_rasterio(args.landcover, verbose=args.verbose)
+
+    log("Reading in shapefiles")
+    landslides = gpd.read_file(args.landslides)
+    faults = gpd.read_file(args.faults)
+
+    log("Processing read in input data")
+    dist_fault = rasterize_faults_as_distance(faults, topo.shape, transform)
+    slope = calculate_slope(topo, verbose=args.verbose)
+
+    log("Preparing training data")
+    x, y = create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, landslides, verbose=args.verbose)
+
+    log("Training classifier")
+    clf = make_classifier(x, y, verbose=args.verbose)
+
+    log("Building probability map")
+    prob_map = make_prob_raster(topo, geo, lc, dist_fault, slope, clf, verbose=args.verbose)
+
+    profile.update(dtype='float32', count=1)
+    with rasterio.open(args.output, 'w', **profile) as dst:
+        dst.write(prob_map.astype(np.float32), 1)
+
+    log(f"Output saved: {args.output}")
+
+    if args.dist_fault_output:
+        dist_profile = profile.copy()
+        dist_profile.update(dtype='float32', count=1)
+        with rasterio.open(args.dist_fault_output, 'w', **dist_profile) as dst:
+            dst.write(dist_fault.astype(np.float32), 1)
+        log(f"Distance from fault saved: {args.dist_fault_output}")
+
+    if args.slope_output:
+        slope_profile = profile.copy()
+        slope_profile.update(dtype='float32', count=1)
+        with rasterio.open(args.slope_output, 'w', **slope_profile) as dst:
+            dst.write(slope.astype(np.float32), 1)
+        log(f"Slope raster saved: {args.slope_output}")
 
     if args.verbose:
         print("*** Reading in Raster Data ***")
