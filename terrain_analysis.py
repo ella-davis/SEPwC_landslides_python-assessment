@@ -2,6 +2,13 @@
 # python3 terrain_analysis.py --topography data/AW3D30.tif --geology data/geology_raster.tif --landcover data/Landcover.tif --faults data/Confirmed_faults.shp data/landslides.shp probability.tif
 # Also make sure that verbose=True is enabled on the functions instead of verbose=False
 
+# Reference List
+#Gillies, S. (2025). rasterio: Fast and direct raster I/O for use with Numpy and SciPy. [Online]. Available at: https://pypi.org/project/rasterio/ [Accessed 23 May 2025].
+#Scikit-Learn. (2025). sklearn.ensemble.RandomForestClassifier — scikit-learn 0.20.3 Documentation. [Online]. Available at: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html [Accessed 23 May 2025].
+#Shafi, A. (2023). Sklearn Random Forest Classifiers in Python Tutorial. [Online]. Available at: https://www.datacamp.com/tutorial/random-forests-classifier-python [Accessed 23 May 2025].
+#(2018). Raster processing using Python Tools: Working with Raster Datasets. [Online]. Available at: https://geohackweek.github.io/raster/04-workingwithrasters [Accessed 23 May 2025].
+#(2025). Rasterio: access to geospatial raster data — rasterio documentation. [Online]. Available at: https://rasterio.readthedocs.io/en/stable/ [Accessed 23 May 2025].
+
 # Import Libraries
 import os
 import random
@@ -80,8 +87,6 @@ def create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, lands
         print(f"    Negative Samples: {len(non_slide_values)}")
         print("    Output First 20 Samples\n", x.head(20))
     return x, y
-
-#Reference - https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
 
 # A function to train a learning model using the raster data read in
 def make_classifier(x, y, verbose=False):
