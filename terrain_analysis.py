@@ -158,51 +158,69 @@ def main():
 
     args = parser.parse_args()
 
+    total_steps = 7
+    current_step = 0
+
     def log(msg):
         if not args.verbose:
             print(msg)
 
-    log("Reading in raster data")
+    # Progress bar printer
+    def progress(step, label):
+        if not args.verbose:
+            pct = int((step / total_steps) * 100)
+            bar_len = 20
+            filled_len = int(bar_len * pct // 100)
+            bar = "#" * filled_len + "-" * (bar_len - filled_len)
+            print(f"[{bar}] {pct}% - {label}")
+
+    current_step += 1
+    progress(current_step, "Reading raster data")
     topo, transform, profile = convert_to_rasterio(args.topography, verbose=args.verbose)
     geo, _, _ = convert_to_rasterio(args.geology, verbose=args.verbose)
     lc, _, _ = convert_to_rasterio(args.landcover, verbose=args.verbose)
 
-    log("Reading in shapefiles")
+    current_step += 1
+    progress(current_step, "Reading shapefiles")
     landslides = gpd.read_file(args.landslides)
     faults = gpd.read_file(args.faults)
 
-    log("Processing read in input data")
+    current_step += 1
+    progress(current_step, "Processing input data")
     dist_fault = rasterize_faults_as_distance(faults, topo.shape, transform)
     slope = calculate_slope(topo, verbose=args.verbose)
 
-    log("Preparing training data")
+    current_step += 1
+    progress(current_step, "Preparing training data")
     x, y = create_training_dataframe(topo, geo, lc, dist_fault, slope, transform, landslides, verbose=args.verbose)
 
-    log("Training classifier")
+    current_step += 1
+    progress(current_step, "Training model")
     clf = make_classifier(x, y, verbose=args.verbose)
 
-    log("Building probability map")
+    current_step += 1
+    progress(current_step, "Generating probability map")
     prob_map = make_prob_raster(topo, geo, lc, dist_fault, slope, clf, verbose=args.verbose)
 
+    current_step += 1
+    progress(current_step, "Exporting outputs")
     profile.update(dtype='float32', count=1)
     with rasterio.open(args.output, 'w', **profile) as dst:
         dst.write(prob_map.astype(np.float32), 1)
-
-    log(f"Output saved: {args.output}")
 
     if args.dist_fault_output:
         dist_profile = profile.copy()
         dist_profile.update(dtype='float32', count=1)
         with rasterio.open(args.dist_fault_output, 'w', **dist_profile) as dst:
             dst.write(dist_fault.astype(np.float32), 1)
-        log(f"Distance from fault saved: {args.dist_fault_output}")
 
     if args.slope_output:
         slope_profile = profile.copy()
         slope_profile.update(dtype='float32', count=1)
         with rasterio.open(args.slope_output, 'w', **slope_profile) as dst:
             dst.write(slope.astype(np.float32), 1)
-        log(f"Slope raster saved: {args.slope_output}")
+
+    log(f"Probability Map outputted to {args.output}")
 
     if args.verbose:
         print("*** Reading in Raster Data ***")
