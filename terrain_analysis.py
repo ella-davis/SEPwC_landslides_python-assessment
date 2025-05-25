@@ -2,11 +2,9 @@
 # python3 terrain_analysis.py --topography data/AW3D30.tif --geology data/geology_raster.tif --landcover data/Landcover.tif --faults data/Confirmed_faults.shp data/landslides.shp probability.tif
 # Also make sure that verbose=True is enabled on the functions instead of verbose=False.
 
-# Environment Variables for allowing deprecated SKLearn Package
-import os
-os.environ['SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL'] = 'True'
-
 # Import Libraries
+import random
+import os
 import argparse
 import rasterio
 import geopandas as gpd
@@ -15,10 +13,12 @@ from rasterio.mask import mask
 from rasterio.features import geometry_mask
 import pandas as pd 
 from shapely.geometry import Point
-import random
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+
+# Environment Variables for allowing deprecated SKLearn Package
+os.environ['SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL'] = 'True'
 
 # A function which opens up the raster files and reads in the data, location and metadata.
 def convert_to_rasterio(raster_data_path, template_raster_path = None, verbose=False):
